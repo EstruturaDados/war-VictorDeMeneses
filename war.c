@@ -1,110 +1,107 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
-#define MAX_ITENS 10
-
-// Definição da struct Item
 typedef struct {
     char nome[30];
-    char tipo[20];
-    int quantidade;
-} Item;
+    char cor[10];
+    int tropas;
+} Territorio;
 
-// Vetor global e contador para simplificar a passagem de parâmetros nas funções
-Item mochila[MAX_ITENS];
-int totalItens = 0;
-
-// Função para listar todos os itens da mochila
-void listarItens() {
-    printf("\n=== SEU INVENTARIO (%d/%d) ===\n", totalItens, MAX_ITENS);
-    if (totalItens == 0) {
-        printf("A mochila esta vazia.\n");
-        return;
-    }
-    for (int i = 0; i < totalItens; i++) {
-        printf("[%d] Nome: %s | Tipo: %s | Qtd: %d\n", i, mochila[i].nome, mochila[i].tipo, mochila[i].quantidade);
-    }
+// Função modularizada para atribuição da missão por referência (ponteiro)
+void atribuirMissao(char* destino, const char* missoes[], int total) {
+    int sorteio = rand() % total;
+    strcpy(destino, missoes[sorteio]); // Copia para o destino alocado
 }
 
-// Função para inserir um novo item na mochila
-void inserirItem() {
-    if (totalItens >= MAX_ITENS) {
-        printf("\nMochila cheia! Nao eh possivel carregar mais itens.\n");
-        return;
-    }
-    
-    printf("\n--- COLETAR NOVO ITEM ---\n");
-    printf("Nome do item: ");
-    scanf(" %[^\n]", mochila[totalItens].nome);
-    printf("Tipo (Arma, Municao, Cura): ");
-    scanf(" %[^\n]", mochila[totalItens].tipo);
-    printf("Quantidade: ");
-    scanf("%d", &mochila[totalItens].quantidade);
-    
-    totalItens++; // Incrementa o total de itens na mochila
-    printf("Item adicionado com sucesso!\n");
-    listarItens();
-}
-
-// Função de busca sequencial pelo nome
-void buscarItem() {
-    char termoBusca[30];
-    printf("\nDigite o nome do item que procura: ");
-    scanf(" %[^\n]", termoBusca);
-    
-    for (int i = 0; i < totalItens; i++) {
-        if (strcmp(mochila[i].nome, termoBusca) == 0) {
-            printf("\nItem Encontrado! Posicao [%d] | Tipo: %s | Qtd: %d\n", i, mochila[i].tipo, mochila[i].quantidade);
-            return;
+// Função modularizada para verificação da missão
+int verificarMissao(char* missao, Territorio* mapa, int qtd, char* corJogador) {
+    int i, contagem = 0;
+    for(i = 0; i < qtd; i++) {
+        if (strcmp(mapa[i].cor, corJogador) == 0) {
+            contagem++; // Conta quantos territórios o jogador possui
         }
     }
-    printf("\nItem '%s' nao foi encontrado na mochila.\n", termoBusca);
-}
-
-// Função para remover um item deslocando os elementos seguintes
-void removerItem() {
-    char termoRemover[30];
-    printf("\nDigite o nome do item que deseja descartar: ");
-    scanf(" %[^\n]", termoRemover);
-    
-    for (int i = 0; i < totalItens; i++) {
-        if (strcmp(mochila[i].nome, termoRemover) == 0) {
-            // Move todos os itens da frente uma posição para trás para preencher o buraco
-            for (int j = i; j < totalItens - 1; j++) {
-                mochila[j] = mochila[j + 1];
-            }
-            totalItens--; // Reduz o tamanho da lista
-            printf("Item removido com sucesso!\n");
-            listarItens();
-            return;
-        }
-    }
-    printf("Item nao encontrado para remocao.\n");
+    // Lógica simples: se a missão pede 2 ou 3 e o jogador atingiu essa quantidade
+    if (strstr(missao, "2") && contagem >= 2) return 1;
+    if (strstr(missao, "3") && contagem >= 3) return 1;
+    return 0;
 }
 
 int main() {
-    int opcao = 0;
+    srand(time(NULL));
+    int qtd, i, atk, def;
 
-    // Menu interativo simples
-    while (opcao != 5) {
-        printf("\n======= MENU DA MOCHILA =======\n");
-        printf("1. Coletar Item (Inserir)\n");
-        printf("2. Descartar Item (Remover)\n");
-        printf("3. Olhar Mochila (Listar)\n");
-        printf("4. Procurar por Item (Buscar)\n");
-        printf("5. Sair do Jogo\n");
-        printf("Escolha uma acao: ");
-        scanf("%d", &opcao);
+    // Vetor de strings com as descrições das missões
+    const char* listaMissoes[] = {
+        "Conquistar pelo menos 2 territorios",
+        "Dominar 3 territorios do mapa"
+    };
 
-        switch (opcao) {
-            case 1: inserirItem(); break;
-            case 2: removerItem(); break;
-            case 3: listarItens(); break;
-            case 4: buscarItem(); break;
-            case 5: printf("\nSaindo... Inventario salvo.\n"); break;
-            default: printf("\nAcao invalida!\n");
+    printf("Quantos territorios? ");
+    scanf("%d", &qtd);
+
+    // Alocação dinâmica de memória (Mapa e Missão)
+    Territorio* mapa = (Territorio*) malloc(qtd * sizeof(Territorio));
+    char* missao = (char*) malloc(100 * sizeof(char));
+
+    // Cadastro simplificado
+    for(i = 0; i < qtd; i++) {
+        printf("\nTerritorio %d:\nNome: ", i);  scanf(" %[^\n]", mapa[i].nome);
+        printf("Cor: ");                      scanf(" %[^\n]", mapa[i].cor);
+        printf("Tropas: ");                   scanf("%d", &mapa[i].tropas);
+    }
+
+    // Define a cor do jogador humano com base no primeiro território cadastrado
+    char minhaCor[10];
+    strcpy(minhaCor, mapa[0].cor);
+
+    // Atribuição (Passagem por referência) e Exibição única
+    atribuirMissao(missao, listaMissoes, 2);
+    printf("\n=== SUA MISSAO SECRETA: %s ===\n", missao);
+
+    // Rodada Única de Ataque
+    printf("\n=== MAPA ATUAL ===\n");
+    for(i = 0; i < qtd; i++) printf("[%d] %s (%s) - Tropas: %d\n", i, mapa[i].nome, mapa[i].cor, mapa[i].tropas);
+
+    printf("\nEscolha o indice do ATACANTE e do DEFENSOR: ");
+    scanf("%d %d", &atk, &def);
+
+    // Validação técnica: Não pode atacar a própria cor (Fogo amigo)
+    if (strcmp(mapa[atk].cor, mapa[def].cor) == 0) {
+        printf("Erro: Voce nao pode atacar seu proprio exercito!\n");
+    } else {
+        // Simulação do ataque usando ponteiros locais para alterar o mapa
+        Territorio* pAtk = &mapa[atk];
+        Territorio* pDef = &mapa[def];
+        
+        int dAtk = (rand() % 6) + 1;
+        int dDef = (rand() % 6) + 1;
+        printf("Dados -> Atacante: %d | Defensor: %d\n", dAtk, dDef);
+
+        if (dAtk > dDef) {
+            printf("VITORIA! Territorio conquistado.\n");
+            strcpy(pDef->cor, pAtk->cor);       // Atualização de dados (muda de dono)
+            pDef->tropas = pAtk->tropas / 2;    // Transfere metade das tropas
+            pAtk->tropas -= pDef->tropas;
+        } else {
+            printf("DERROTA! O ataque falhou.\n");
+            if (pAtk->tropas > 0) pAtk->tropas--;
         }
     }
+
+    // Verificação silenciosa de vitória ao fim do turno
+    if (verificarMissao(missao, mapa, qtd, minhaCor)) {
+        printf("\nVOCO VENCEU O JOGO! Sua missao foi cumprida.\n");
+    } else {
+        printf("\nA missao ainda nao foi cumprida.\n");
+    }
+
+    // Liberação de toda a memória alocada
+    free(mapa);
+    free(missao);
+    printf("Memoria liberada. Fim.\n");
 
     return 0;
 }
